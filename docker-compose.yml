@@ -17,6 +17,13 @@ services:
     environment:
       POSTGRES_PASSWORD: Kennwort1
 
+  ods:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: Kennwort1
+
   adminer:
     image: adminer
     restart: always

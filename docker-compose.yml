@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_PASSWORD: Kennwort1
       POSTGRES_USER: admin
-      POSTGRES_DB: datawarehouse
+      POSTGRES_DB: postgres
     ports:
       - 5432:5432
     volumes:

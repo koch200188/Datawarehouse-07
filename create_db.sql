@@ -52,15 +52,29 @@ CREATE TABLE IF NOT EXISTS "WeatherData" (
 CREATE OR REPLACE FUNCTION notify_weather_update()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM pg_notify('weather_data_updates', json_build_object(
-        'districtCode', NEW.districtCode,
-        'date', NEW.date,
-        'airPressure', NEW.airPressure,
-        'temperature', NEW.temperature,
-        'humidity', NEW.humidity,
-        'wind', NEW.wind,
-        'rainfall', NEW.rainfall
-    )::text);
+    IF TG_OP = 'DELETE' THEN
+        PERFORM pg_notify('weather_data_updates', json_build_object(
+            'operation', TG_OP,
+            'districtCode', OLD.districtCode,
+            'date', OLD.date,
+            'airPressure', OLD.airPressure,
+            'temperature', OLD.temperature,
+            'humidity', OLD.humidity,
+            'wind', OLD.wind,
+            'rainfall', OLD.rainfall
+        )::text);
+    ELSE
+        PERFORM pg_notify('weather_data_updates', json_build_object(
+            'operation', TG_OP,
+            'districtCode', NEW.districtCode,
+            'date', NEW.date,
+            'airPressure', NEW.airPressure,
+            'temperature', NEW.temperature,
+            'humidity', NEW.humidity,
+            'wind', NEW.wind,
+            'rainfall', NEW.rainfall
+        )::text);
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -69,9 +83,6 @@ CREATE TRIGGER weather_update_trigger
 AFTER INSERT OR UPDATE ON "WeatherData"
 FOR EACH ROW EXECUTE FUNCTION notify_weather_update();
 
-CREATE TRIGGER population_update_trigger
-AFTER INSERT OR UPDATE ON "PopulationData"
-FOR EACH ROW EXECUTE FUNCTION notify_weather_update();
 
 CREATE DATABASE ods;
 \c ods;

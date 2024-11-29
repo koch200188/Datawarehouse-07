@@ -80,9 +80,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER weather_update_trigger
-AFTER INSERT OR UPDATE ON "WeatherData"
+AFTER INSERT OR UPDATE OR DELETE ON "WeatherData"
 FOR EACH ROW EXECUTE FUNCTION notify_weather_update();
-
 
 CREATE DATABASE ods;
 \c ods;
@@ -95,3 +94,22 @@ CREATE TABLE IF NOT EXISTS "RealtimeWeatherData" (
     rainfall FLOAT,
     PRIMARY KEY (districtCode, date)
 );
+
+CREATE OR REPLACE FUNCTION notify_ods_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM pg_notify('ods_data_update', json_build_object(
+        'operation', TG_OP,
+        'districtCode', NEW.districtCode,
+        'date', NEW.date,
+        'temperature', NEW.temperature,
+        'wind', NEW.wind,
+        'rainfall', NEW.rainfall
+    )::text);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ods_update_trigger
+AFTER INSERT OR UPDATE ON "RealtimeWeatherData"
+FOR EACH ROW EXECUTE FUNCTION notify_ods_update();

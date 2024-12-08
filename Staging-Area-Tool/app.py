@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 from sqlalchemy import create_engine
-
+from sqlalchemy import text
 
 def extract_data_csv(file_path: str):
     try:
@@ -37,13 +37,14 @@ def extract_data_api(api_url: str):
 
         df['station'] = station_id
 
+        print(f"Erfolgreich API Daten extrahiert")
         return df
     except Exception as e:
         print(f"Error extracting data from API: {e}")
         return None
 
 
-def transform_migration_data(data):
+def transform_population_data(data):
     try:
         data = data.drop(columns=['AGR3', 'SEX', 'NUTS', 'REF_YEAR', 'DISTRICT_CODE'])
         data = data.rename(columns={
@@ -52,6 +53,7 @@ def transform_migration_data(data):
             'AUT': 'austrianCitizens',
             'FOR': 'foreignCitizens',
         })
+        data['date'] = pd.to_datetime(data['date'], errors='coerce', format='%Y%m%d')
 
         aggregated_data = data.groupby(
             ['districtCode', 'date'], as_index=False
@@ -60,7 +62,8 @@ def transform_migration_data(data):
             'foreignCitizens': 'sum'
         })
 
-        print(f'Migration:\n{aggregated_data.head()}')
+
+        print(f'Population:\n{aggregated_data.head()}')
         return aggregated_data
     except Exception as e:
         print(f"Error transforming data: {e}")
@@ -84,6 +87,8 @@ def transform_election_data(data):
         })
 
         data['districtCode'] = data['districtCode'].str[1:]
+
+        data['date'] = '2024-09-29 00:00:00'
 
         aggregated_data = data.groupby(
             ['districtCode', 'districtName'], as_index=False
@@ -117,6 +122,8 @@ def transform_education_data(data):
             'REF_DATE': 'date',
         })
 
+        data['date'] = pd.to_datetime(data['date'], errors='coerce', format='%Y%m%d')
+
         aggregated_data = data.groupby(
             ['districtCode', 'date'], as_index=False
         ).sum()
@@ -136,7 +143,9 @@ def transform_weather_data(data):
         if not all(col in data.columns for col in ['timestamp', 'ff', 'p', 'rf', 'rr', 'tl']):
             print("Expected columns are missing. Check the data extraction step.")
             return None
-
+        
+        data = data.drop(columns=['station'])
+        data['districtCode'] = 90000
         data['timestamp'] = pd.to_datetime(data['timestamp'])
 
         numeric_columns = ['ff', 'p', 'rf', 'rr', 'tl']
@@ -159,19 +168,18 @@ def transform_weather_data(data):
         print(f"Error transforming weather data: {e}")
         return None
 
-
 def create_db_engine():
-    db_url = "postgresql://admin:Kennwort1@localhost:5432/postgres"
+    db_url = "postgresql://admin:Kennwort1@localhost:5432/datawarehouse"
     engine = create_engine(db_url)
     return engine
 
-
-def load_data_to_db(data, table_name):
+def load_data_to_db(data, table_name: str):
     try:
-        if data is not None:
+        if data is not None and not data.empty:
             engine = create_db_engine()
 
-        
+            data.to_sql(table_name, engine, if_exists='replace', index=False)
+
             print(f"Data successfully loaded into {table_name} table.")
         else:
             print(f"No data available to load into {table_name}.")
@@ -179,18 +187,20 @@ def load_data_to_db(data, table_name):
         print(f"Error loading data into {table_name}: {e}")
 
 
+
 if __name__ == "__main__":
-    migration_data = extract_data_csv('data/migration.csv')
+
+    population_data = extract_data_csv('data/population.csv')
     election_data = extract_data_csv('data/election2024-09-29_austria.csv')
     education_data = extract_data_csv('data/education.csv')
     weather_data = extract_data_api('https://dataset.api.hub.geosphere.at/v1/station/historical/klima-v2-1h?parameters=P%2CTL%2CRF%2CFF%2CRR&start=2024-09-29T00%3A00&end=2024-09-30T00%3A00&station_ids=5925&output_format=geojson')
 
-    transformed_migration_data = transform_migration_data(migration_data)
+    transformed_population_data = transform_population_data(population_data)
     transformed_election_data = transform_election_data(election_data)
     transformed_education_data = transform_education_data(education_data)
     transformed_weather_data = transform_weather_data(weather_data)
 
-    load_data_to_db(transformed_migration_data, 'PopulationData')
+    load_data_to_db(transformed_population_data, 'PopulationData')
     load_data_to_db(transformed_election_data, 'ElectionData')
     load_data_to_db(transformed_education_data, 'EducationData')
     load_data_to_db(transformed_weather_data, 'WeatherData')

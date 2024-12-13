@@ -2,10 +2,8 @@ CREATE DATABASE datawarehouse;
 \c datawarehouse;
 
 CREATE TABLE IF NOT EXISTS "Location" (
-    districtCode INT NOT NULL,
-    date TIMESTAMP NOT NULL,
-    districtName VARCHAR(100),
-    PRIMARY KEY (districtCode, date)
+    districtCode INT PRIMARY KEY,
+    districtName VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS "PopulationData" (

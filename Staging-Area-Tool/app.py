@@ -1,7 +1,6 @@
 import pandas as pd
 import requests
 from sqlalchemy import create_engine
-from sqlalchemy import text
 
 def extract_data_csv(file_path: str):
     try:
@@ -11,6 +10,7 @@ def extract_data_csv(file_path: str):
     except Exception as e:
         print(f"Error extracting data from {file_path}: {e}")
         return None
+
 
 def extract_data_api(api_url: str):
     try:
@@ -72,7 +72,6 @@ def transform_population_data(data):
 def transform_election_data(data):
     try:
         data['OTHER'] = data[['BIER', 'MFG', 'BGE', 'LMP', 'GAZA', 'KPÖ', 'KEINE']].sum(axis=1, skipna=True)
-
         data = data.drop(columns=['BIER', 'MFG', 'BGE', 'LMP', 'GAZA', 'KPÖ', 'KEINE', 'Wahlberechtigte', 'Abgegebene', 'Ungültige', 'Gültige'])
 
         data = data.rename(columns={
@@ -93,9 +92,13 @@ def transform_election_data(data):
         aggregated_data = data.groupby(
             ['districtCode', 'districtName'], as_index=False
         ).sum()
+        
+        location_data = aggregated_data[['districtCode', 'districtName']].drop_duplicates()
+
+        aggregated_data = data.drop(columns=['districtName'])
 
         print(f'Election:\n{aggregated_data.head()}')
-        return aggregated_data
+        return aggregated_data, location_data
     except Exception as e:
         print(f"Error transforming data: {e}")
         return None 
@@ -168,12 +171,13 @@ def transform_weather_data(data):
         print(f"Error transforming weather data: {e}")
         return None
 
+
 def create_db_engine():
     db_url = "postgresql://admin:Kennwort1@localhost:5432/datawarehouse"
     engine = create_engine(db_url)
     return engine
 
-def load_data_to_db(data, table_name: str):
+def load_data_to_db(data, table_name:str):
     try:
         if data is not None and not data.empty:
             engine = create_db_engine()
@@ -187,16 +191,14 @@ def load_data_to_db(data, table_name: str):
         print(f"Error loading data into {table_name}: {e}")
 
 
-
 if __name__ == "__main__":
-
     population_data = extract_data_csv('data/population.csv')
     election_data = extract_data_csv('data/election2024-09-29_austria.csv')
     education_data = extract_data_csv('data/education.csv')
     weather_data = extract_data_api('https://dataset.api.hub.geosphere.at/v1/station/historical/klima-v2-1h?parameters=P%2CTL%2CRF%2CFF%2CRR&start=2024-09-29T00%3A00&end=2024-09-30T00%3A00&station_ids=5925&output_format=geojson')
 
     transformed_population_data = transform_population_data(population_data)
-    transformed_election_data = transform_election_data(election_data)
+    transformed_election_data, transformed_location_data = transform_election_data(election_data)
     transformed_education_data = transform_education_data(education_data)
     transformed_weather_data = transform_weather_data(weather_data)
 
@@ -204,3 +206,4 @@ if __name__ == "__main__":
     load_data_to_db(transformed_election_data, 'ElectionData')
     load_data_to_db(transformed_education_data, 'EducationData')
     load_data_to_db(transformed_weather_data, 'WeatherData')
+    load_data_to_db(transformed_location_data, 'Location')

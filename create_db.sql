@@ -2,10 +2,8 @@ CREATE DATABASE datawarehouse;
 \c datawarehouse;
 
 CREATE TABLE IF NOT EXISTS "Location" (
-    districtCode INT NOT NULL,
-    date TIMESTAMP NOT NULL,
-    districtName VARCHAR(100),
-    PRIMARY KEY (districtCode, date)
+    districtCode INT PRIMARY KEY,
+    districtName VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS "PopulationData" (
@@ -29,10 +27,10 @@ CREATE TABLE IF NOT EXISTS "EducationData" (
 CREATE TABLE IF NOT EXISTS "ElectionData" (
     districtCode INT NOT NULL,
     date TIMESTAMP NOT NULL,
-    övpVotes INT NOT NULL,
-    spöVotes INT NOT NULL,
-    fpöVotes INT NOT NULL,
-    grüneVotes INT NOT NULL,
+    oevpVotes INT NOT NULL,
+    spoeVotes INT NOT NULL,
+    fpoeVotes INT NOT NULL,
+    grueneVotes INT NOT NULL,
     neosVotes INT NOT NULL,
     otherVotes INT NOT NULL,
     PRIMARY KEY (districtCode, date)

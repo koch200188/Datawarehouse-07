@@ -1,8 +1,40 @@
 import express from "express";
 import pg from "pg";
+import http from "http";
+import { WebSocketServer } from "ws";
+import cors from "cors";
+
 const { Client } = pg;
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 const port = 3000;
+
+app.use(cors());
+
+wss.on("connection", (ws) => {
+  console.log("New WebSocket connection");
+
+  ws.on("message", (message) => {
+    console.log("Received:", message);
+  });
+
+  ws.on("close", () => {
+    console.log("WebSocket connection closed");
+  });
+});
+
+function broadcast(message) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify(message));
+    }
+  });
+}
+
+const temperatureTrigger = 30;
+const windTrigger = 50;
+const rainFallTrigger = 5;
 
 const clientDatawareHouse = new Client({
   user: "admin",
@@ -92,6 +124,30 @@ async function OdsAction() {
       const { operation, districtCode, date, temperature, wind, rainfall } =
         payload;
 
+      if (temperature >= temperatureTrigger) {
+        broadcast({
+          text: `Temperature Warning ${temperature}`,
+          temperature: temperature,
+          date: new Date(),
+        });
+      }
+
+      if (wind >= windTrigger) {
+        broadcast({
+          text: `Wind Warning ${wind}`,
+          wind: wind,
+          date: new Date(),
+        });
+      }
+
+      if (rainfall >= rainFallTrigger) {
+        broadcast({
+          text: `Rainfall Warning ${rainfall}`,
+          rainfall: rainfall,
+          date: new Date(),
+        });
+      }
+
       console.log("ods updated:", payload);
     });
   } catch (err) {
@@ -105,4 +161,4 @@ async function OdsAction() {
 await DatawareHouseUpdater();
 await OdsAction();
 
-app.listen(port, () => console.log(`Server running on port ${port}`));
+server.listen(port, () => console.log(`Server running on port ${port}`));

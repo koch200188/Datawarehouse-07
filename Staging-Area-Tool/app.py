@@ -77,10 +77,10 @@ def transform_election_data(data):
         data = data.rename(columns={
             'Gebietsnummer': 'districtCode',
             'Gebietsname': 'districtName',
-            'ÖVP': 'övpVotes',
-            'SPÖ': 'spöVotes',
-            'FPÖ': 'fpöVotes',
-            'GRÜNE': 'grüneVotes',
+            'ÖVP': 'oevpVotes',
+            'SPÖ': 'spoeVotes',
+            'FPÖ': 'fpoeVotes',
+            'GRÜNE': 'grueneVotes',
             'NEOS': 'neosVotes',
             'OTHER': 'otherVotes'
         })

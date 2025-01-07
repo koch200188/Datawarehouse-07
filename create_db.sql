@@ -111,3 +111,39 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER ods_update_trigger
 AFTER INSERT OR UPDATE ON "RealtimeWeatherData"
 FOR EACH ROW EXECUTE FUNCTION notify_ods_update();
+
+
+
+
+
+
+CREATE DATABASE datamart;
+\c datamart;
+
+CREATE TABLE IF NOT EXISTS "Location" (
+    districtCode INT PRIMARY KEY,
+    districtName VARCHAR(100)
+);
+
+CREATE TABLE IF NOT EXISTS "ElectionData" (
+    districtCode INT NOT NULL,
+    date TIMESTAMP NOT NULL,
+    oevpVotes INT NOT NULL,
+    spoeVotes INT NOT NULL,
+    fpoeVotes INT NOT NULL,
+    grueneVotes INT NOT NULL,
+    neosVotes INT NOT NULL,
+    otherVotes INT NOT NULL,
+    PRIMARY KEY (districtCode, date)
+);
+
+CREATE TABLE IF NOT EXISTS "WeatherData" (
+    districtCode INT NOT NULL,
+    date TIMESTAMP NOT NULL,
+    airPressure FLOAT,
+    temperature FLOAT,
+    humidity FLOAT,
+    wind FLOAT,
+    rainfall FLOAT,
+    PRIMARY KEY (districtCode, date)
+);

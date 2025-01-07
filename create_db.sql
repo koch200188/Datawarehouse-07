@@ -61,6 +61,7 @@ BEGIN
             'wind', OLD.wind,
             'rainfall', OLD.rainfall
         )::text);
+        RETURN OLD;
     ELSE
         PERFORM pg_notify('weather_data_updates', json_build_object(
             'operation', TG_OP,
@@ -72,8 +73,8 @@ BEGIN
             'wind', NEW.wind,
             'rainfall', NEW.rainfall
         )::text);
+        RETURN NEW;
     END IF;
-    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 

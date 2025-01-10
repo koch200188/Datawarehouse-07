@@ -115,9 +115,6 @@ FOR EACH ROW EXECUTE FUNCTION notify_ods_update();
 
 
 
-
-
-
 CREATE DATABASE datamart;
 \c datamart;
 
@@ -148,3 +145,42 @@ CREATE TABLE IF NOT EXISTS "WeatherData" (
     rainfall FLOAT,
     PRIMARY KEY (districtCode, date)
 );
+
+
+
+
+CREATE OR REPLACE FUNCTION update_datamart()
+RETURNS VOID AS $$
+BEGIN
+
+    INSERT INTO "WeatherData" (districtCode, date, airPressure, temperature, humidity, wind, rainfall)
+    SELECT 
+        districtCode, 
+        date, 
+        NULL AS airPressure,  
+        temperature, 
+        NULL AS humidity,      -
+        wind, 
+        rainfall
+    FROM ods."RealtimeWeatherData"
+    ON CONFLICT (districtCode, date) DO UPDATE
+    SET 
+        temperature = EXCLUDED.temperature,
+        wind = EXCLUDED.wind,
+        rainfall = EXCLUDED.rainfall;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION schedule_datamart_update()
+RETURNS VOID AS $$
+BEGIN
+    PERFORM pg_cron.schedule(
+        job_name := 'datamart_hourly_update',
+        schedule := '0 * * * *',  
+        command := 'SELECT update_datamart()'
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT schedule_datamart_update();
